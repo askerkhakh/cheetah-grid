@@ -13,6 +13,7 @@
     "test:watch": "cross-env BABEL_ENV=test karma start",
     "test:ie": "cross-env BABEL_ENV=test karma start --browsers IE_no_addons",
     "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
     "watch": "webpack --watch --mode development",
     "lint": "npm run eslint && npm run stylelint",
     "eslint": "eslint . --ext .js,.vue",

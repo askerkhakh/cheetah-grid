@@ -138,11 +138,14 @@ export interface DataSourceAPI<T> {
   sort(field: FieldDef<T>, order: "desc" | "asc"): MaybePromise<void>;
 }
 
-export interface SortState {
+export interface SortColumnState {
   col: number;
   row: number;
-  order: "asc" | "desc" | undefined;
+  order: "asc" | "desc";
 }
+
+export type SortState = SortColumnState[];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type HeaderValues = Map<any, any>;
 export interface ListGridAPI<T> extends DrawGridAPI {

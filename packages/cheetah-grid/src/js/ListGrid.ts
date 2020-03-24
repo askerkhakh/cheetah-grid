@@ -25,6 +25,7 @@ import {
   PasteCellEvent,
   SelectedCellEvent,
   SetPasteValueTestData,
+  SortColumnState,
   SortState,
   ThemeDefine
 } from "./ts-types";
@@ -753,11 +754,7 @@ export class ListGrid<T> extends DrawGrid implements ListGridAPI<T> {
     }
     protectedSpace.allowRangePaste = options.allowRangePaste ?? false;
     _refreshHeader(this);
-    protectedSpace.sortState = {
-      col: -1,
-      row: -1,
-      order: undefined
-    };
+    protectedSpace.sortState = [];
     protectedSpace.gridCanvasHelper = new GridCanvasHelper(this);
     protectedSpace.theme = themes.of(options.theme);
     protectedSpace.messageHandler = new MessageHandler(
@@ -930,36 +927,48 @@ export class ListGrid<T> extends DrawGrid implements ListGridAPI<T> {
   get sortState(): SortState {
     return this[_].sortState;
   }
+  sortStateToSortStateFieldMap(
+    sortState: SortState
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Map<any, SortColumnState> {
+    return sortState.reduce((map, sortColumnState) => {
+      const headerField = this.getHeaderField(
+        sortColumnState.col,
+        sortColumnState.row
+      );
+      if (headerField) {
+        map.set(headerField, sortColumnState);
+      }
+      return map;
+    }, new Map());
+  }
   /**
    * Sets the sort state.
    * If `null` to set, the sort state is initialized.
    */
   set sortState(sortState) {
-    const oldState = this.sortState;
-    let oldField;
-    if (oldState.col >= 0 && oldState.row >= 0) {
-      oldField = this.getHeaderField(oldState.col, oldState.row);
-    }
+    const oldState = this.sortStateToSortStateFieldMap(this.sortState);
 
-    const newState = (this[_].sortState = isDef(sortState)
-      ? sortState
-      : {
-          col: -1,
-          row: -1,
-          order: undefined
-        });
+    const newState = this.sortStateToSortStateFieldMap(
+      (this[_].sortState = isDef(sortState) ? sortState : [])
+    );
 
-    let newField;
-    if (newState.col >= 0 && newState.row >= 0) {
-      newField = this.getHeaderField(newState.col, newState.row);
+    // removing old sort columns, that doesn't exist in new sort columns
+    for (const [oldField, oldSortColumnState] of oldState.entries()) {
+      if (!newState.get(oldField)) {
+        this.setHeaderValue(
+          oldSortColumnState.col,
+          oldSortColumnState.row,
+          undefined
+        );
+      }
     }
-
-    // bind header value
-    if (isDef(oldField) && oldField !== newField) {
-      this.setHeaderValue(oldState.col, oldState.row, undefined);
-    }
-    if (isDef(newField)) {
-      this.setHeaderValue(newState.col, newState.row, newState.order);
+    for (const [, newSortColumnState] of newState.entries()) {
+      this.setHeaderValue(
+        newSortColumnState.col,
+        newSortColumnState.row,
+        newSortColumnState.order
+      );
     }
   }
   /**

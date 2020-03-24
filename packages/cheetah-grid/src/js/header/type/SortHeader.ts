@@ -1,7 +1,9 @@
 import {
   CellContext,
+  CellRange,
   GridCanvasHelperAPI,
   ListGridAPI,
+  SortColumnState,
   SortState
 } from "../../ts-types";
 import { cellInRange, isDef } from "../../internal/utils";
@@ -22,6 +24,18 @@ export class SortHeader<T> extends BaseHeader<T> {
     grid: ListGridAPI<T>,
     { drawCellBase }: DrawCellInfo<T>
   ): void {
+    function findSortColumnStateByRange(
+      range: CellRange,
+      state: SortState
+    ): SortColumnState | undefined {
+      for (const sortColumnState of state) {
+        if (cellInRange(range, sortColumnState.col, sortColumnState.row)) {
+          return sortColumnState;
+        }
+      }
+      return undefined;
+    }
+
     const {
       textAlign,
       textBaseline = "middle",
@@ -42,8 +56,10 @@ export class SortHeader<T> extends BaseHeader<T> {
     let order = undefined;
     const { col, row } = context;
     const range = grid.getCellRange(col, row);
-    if (cellInRange(range, state.col, state.row)) {
-      ({ order } = state);
+
+    const sortColumnState = findSortColumnStateByRange(range, state);
+    if (sortColumnState) {
+      ({ order } = sortColumnState);
     }
 
     const ctx = context.getContext();

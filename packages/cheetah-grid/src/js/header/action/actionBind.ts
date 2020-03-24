@@ -15,7 +15,7 @@ export function bindCellClickAction<T>(
     mouseOver,
     mouseOut
   }: {
-    action: (cell: CellAddress) => void;
+    action: (cell: CellAddress, event: MouseEvent) => void;
     mouseOver?: (cell: CellAddress) => boolean;
     mouseOut?: (cell: CellAddress) => void;
   }
@@ -30,10 +30,13 @@ export function bindCellClickAction<T>(
       if (!isTarget(e.col, e.row)) {
         return;
       }
-      action({
-        col: e.col,
-        row: e.row
-      });
+      action(
+        {
+          col: e.col,
+          row: e.row
+        },
+        e.event
+      );
     }),
     // mouse move
     grid.listen(DG_EVENT_TYPE.MOUSEOVER_CELL, e => {

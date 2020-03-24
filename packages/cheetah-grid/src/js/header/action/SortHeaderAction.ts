@@ -3,6 +3,7 @@ import {
   EventListenerId,
   LayoutObjectId,
   ListGridAPI,
+  SortColumnState,
   SortHeaderActionOption,
   SortOption,
   SortState
@@ -26,7 +27,7 @@ export class SortHeaderAction<T> extends BaseAction<T> {
   clone(): SortHeaderAction<T> {
     return new SortHeaderAction(this);
   }
-  _executeSort(newState: SortState, grid: ListGridAPI<T>): void {
+  _executeSort(newState: SortColumnState, grid: ListGridAPI<T>): void {
     if (typeof this._sort === "function") {
       this._sort({
         order: newState.order || "asc",
@@ -51,28 +52,72 @@ export class SortHeaderAction<T> extends BaseAction<T> {
     function isTarget(col: number, row: number): boolean {
       return grid.getLayoutCellId(col, row) === cellId;
     }
-    const action = (cell: CellAddress): void => {
+
+    function findSortColumn(
+      state: SortState,
+      row: number
+    ): SortColumnState | undefined {
+      for (const sortColumnState of state) {
+        if (isTarget(sortColumnState.col, row)) {
+          return sortColumnState;
+        }
+      }
+      return undefined;
+    }
+
+    const action = (cell: CellAddress, event: MouseEvent): void => {
       if (this.disabled) {
         return;
       }
       const state = grid.sortState as SortState;
       let newState: SortState;
       const range = grid.getCellRange(cell.col, cell.row);
-      if (isTarget(state.col, cell.row)) {
-        newState = {
-          col: range.start.col,
-          row: range.start.row,
-          order: state.order === "asc" ? "desc" : "asc"
-        };
+      const sortColumn = findSortColumn(state, cell.row);
+      let sortColumnForEvent: SortColumnState | undefined = undefined;
+      if (event.ctrlKey) {
+        newState = state;
+        if (sortColumn) {
+          if (sortColumn.order === "desc") {
+            newState.splice(newState.indexOf(sortColumn), 1);
+          } else {
+            sortColumn.order = "desc";
+            sortColumnForEvent = sortColumn;
+          }
+        } else {
+          sortColumnForEvent = {
+            col: range.start.col,
+            row: range.start.row,
+            order: "asc"
+          };
+          newState.push(sortColumnForEvent);
+        }
       } else {
-        newState = {
-          col: range.start.col,
-          row: range.start.row,
-          order: "asc"
-        };
+        if (sortColumn) {
+          if (sortColumn.order === "desc") {
+            newState = [];
+          } else {
+            sortColumnForEvent = {
+              col: range.start.col,
+              row: range.start.row,
+              order: "desc"
+            };
+            newState = [sortColumnForEvent];
+          }
+        } else {
+          sortColumnForEvent = {
+            col: range.start.col,
+            row: range.start.row,
+            order: "asc"
+          };
+          newState = [sortColumnForEvent];
+        }
       }
       grid.sortState = newState;
-      this._executeSort(newState, grid);
+      if (!sortColumnForEvent) {
+        // for backward compatibility
+        sortColumnForEvent = { col: -1, row: -1, order: "asc" };
+      }
+      this._executeSort(sortColumnForEvent, grid);
       grid.invalidateGridRect(0, 0, grid.colCount - 1, grid.rowCount - 1);
     };
 
